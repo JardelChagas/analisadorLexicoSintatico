@@ -4,9 +4,7 @@ class Lexico:
     def __init__(self, file):
         self.file = open(file)
         self.out = pd.DataFrame(columns=["Lexema", "Padrão", "Token", "Linha"])
-        self.symbolTable = pd.DataFrame([
-            {"value", "number", },
-        ])
+        self.symbolTable = pd.DataFrame([{"value", "number", }, ])
         self.lexemasReserveString = [
             "class",
             "public",
@@ -34,7 +32,7 @@ class Lexico:
         self.stackK = [] #pilha de chaves
         self.stackP = [] #pilha de parenteses
         self.stackC = [] #pilha de cochetes
-
+        self.stack  = []
 
     def structure(self):
         list = self.mainClass()
@@ -42,25 +40,63 @@ class Lexico:
             self.classDeclaration(list[0], list[1])
 
     def mainClass(self):
+        mc = ["class", "Identifier", "{", "public", "static", "void", "main", "(", "String", "[", "]", "Identifier", ")", "{", "Statement", "}", "}"]
         token = ""
         countLine = 0
-        est = 1
+        est = 0
         for line in self.file:
             countLine += 1
             i = 0
             while i < len(line):
                 if line[i] != " " and line[i] != ""and line[i] != "\n":
                     token = token + line[i]
-                    if token == "class" and est == 1:
+                    if token == mc[est] or mc[est] == "Identifier" or mc[est] == "Statement":
+                        if mc[est] == "Identifier":
+                            l = self.identifier(line, i)
+                            if l == "":
+                                print("erro line ", countLine)
+                                return ""
+                            else:
+                                self.createRow(l[0], countLine)
+                                i = l[2] - 1
+                                token = ""
+                            est += 1
+
+                        elif mc[est] == "Statement":
+                            self.statement(i, countLine)
+                            est += 1
+                            token = ""
+                        elif mc[est] in self.symbols:
+                            for j in range(len(self.symbols)):
+                                if mc[est] == self.symbols[j]:
+                                    if j % 2 == 0:
+                                        self.createRow(token, countLine)
+                                        self.stack.append("#")
+                                        break
+                                    else:
+                                        self.createRow(token, countLine)
+                                        self.stack.pop()
+                                        break
+                            est += 1
+                            token = ""
+                        else:
+                            self.createRow(token, countLine)
+                            token = ""
+                            est += 1
+
+                    '''if token == "class" and est == 1:
                         self.createRow(token, countLine)
 
-                        token = ""
                         est += 1
 
-                        l = self.identifier(line, i+1)
-
-                        self.createRow(l[0], countLine)
-                        i = l[2]-1
+                        l = self.identifier(line, i + 1)
+                        if l == "":
+                            print("erro line ", countLine)
+                            return ""
+                        else:
+                            self.createRow(l[0], countLine)
+                            i = l[2] - 1
+                            token = ""
 
                     elif token == "{" and est == 2:
                         est += 1
@@ -103,9 +139,13 @@ class Lexico:
                         self.createRow(token, countLine)
                         self.stackC.pop()
                         l = self.identifier(line, i+1)
-                        self.createRow(l[0], countLine)
-                        i = l[2] - 1
-                        token = ""
+                        if l == "":
+                            print("erro line ", countLine)
+                            return ""
+                        else:
+                            self.createRow(l[0], countLine)
+                            i = l[2] - 1
+                            token = ""
                     elif token == ")" and est == 11:
                         est += 1
                         self.createRow(token, countLine)
@@ -126,8 +166,9 @@ class Lexico:
                         print(est)
                         token = ""
                     else:
-                        print(end="")
+                        print(end="")'''
                 i += 1
+        print(est)
 
 
         print(self.out)
@@ -149,17 +190,16 @@ class Lexico:
                 if re[b] >= "a" and re[b] <= "z":
                     txt += re[b]
                     stt+=1
-                elif re[b] >="A" and re[b] <= "Z":
-                    txt +=re[b]
-                    stt += 1
-                elif re[b] >="0" and re[b] <="9":
-                    txt +=re[b]
+                elif re[b] >= "A" and re[b] <= "Z":
+                    txt += re[b]
                     stt += 1
                 elif re[b] == "_":
-                    txt +=re[b]
+                    txt += re[b]
                     stt += 1
+                elif re[b] != " " and re[b] != "" and re[b] != "\n":
+                    return ""
             else:
-                if re[b] >="a" and re[b] <="z":
+                if re[b] >= "a" and re[b] <= "z":
                     txt +=re[b]
                 elif re[b] >="A" and re[b] <="Z":
                     txt +=re[b]
