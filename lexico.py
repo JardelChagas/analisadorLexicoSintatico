@@ -3,6 +3,7 @@ import pandas as pd
 class Lexico:
     def __init__(self, file):
         self.file = open(file)
+        self.dir = file
         self.out = pd.DataFrame(columns=["Lexema", "Padrão", "Token", "Linha"])
         self.symbolTable = pd.DataFrame(columns=["value", "number" ])
         self.lexemasReserveString = [
@@ -27,25 +28,24 @@ class Lexico:
         self.symbols = [
             "(", ")",
             "[", "]",
-            "{", "}"
+            "{", "}", ";"
         ]
         self.stackK = [] #pilha de chaves
         self.stackP = [] #pilha de parenteses
         self.stackC = [] #pilha de cochetes
         self.stack  = []
+        self.countIdentifier = 0
 
     def structure(self):
         list = self.mainClass()
         if list != "":
             self.classDeclaration(list[0], list[1])
-        print("-----------------------")
-        print(self.symbolTable)
 
     def mainClass(self):
         mc = ["class", "Identifier", "{", "public", "static", "void", "main", "(", "String", "[", "]", "Identifier", ")",
               "{", "Statement", "}", "}"]
         token = ""
-        countIdentifier = 0;
+
         countLine = 0
         est = 0
         for line in self.file:
@@ -54,6 +54,7 @@ class Lexico:
             while i < len(line):
                 if line[i] != " " and line[i] != "" and line[i] != "\n":
                     token = token + line[i]
+                    #print(token)
                     if token == mc[est] or mc[est] == "Identifier" or mc[est] == "Statement":
                         if mc[est] == "Identifier":
                             l = self.identifier(line, i)
@@ -61,17 +62,18 @@ class Lexico:
                                 print("erro line ", countLine)
                                 return ""
                             else:
-                                countIdentifier += 1
+                                self.countIdentifier += 1
                                 self.createRow(l[0], countLine)
                                 self.symbolTable = self.symbolTable.append(
-                                    {"value": l[0], "number": countIdentifier}, ignore_index=True)
+                                    {"value": l[0], "number": self.countIdentifier}, ignore_index=True)
 
                                 i = l[2] - 1
                                 token = ""
                             est += 1
                         elif mc[est] == "Statement":
-                            self.statement(i+1, countLine)
+                            self.statement(line, countLine)
                             est += 1
+                            i = len(line)
                             token = ""
                         elif mc[est] in self.symbols:
                             for j in range(len(self.symbols)):
@@ -90,12 +92,21 @@ class Lexico:
                             self.createRow(token, countLine)
                             token = ""
                             est += 1
+                    else:
+                        if self.isErr(token, mc, countLine):
+                            print("erro! Simbolo invalido na linha ", countLine)
+                            return ''
+
+
+
 
                 i += 1
         print(est)
 
 
         print(self.out)
+        self.type("int 10", 0, countLine)
+
         return [line, i]
 
     def classDeclaration(self, r, e):
@@ -159,31 +170,102 @@ class Lexico:
             {"Lexema": aux, "Padrão": stdd, "Token": tk, "Linha": cont},
             ignore_index=True)
 
-    def statement(self, i, countLine):
+    def statement(self, line, countLine):
+        file = open(self.dir)
         cont = 1
-        print(i)
-        tk =""
-        for l in self.file:
+        tk = ""
+        i = 0
+        for l in file:
             if cont >= countLine:
                 while i < len(l):
                     if l[i] != " " and l[i] != "" and l[i] != "\n":
                         tk += l[i]
                         if tk == "System.out.println":
                             self.createRow(tk, cont)
-                            i+=1
+                            i += 1
 
                             if l[i] != " " and l[i] != "" and l[i] != "\n":
-                                if l[i] =="(":
+                                if l[i] == "(":
                                     self.createRow(l[i], cont)
-                            print(tk, end="")
+                                    i = self.expression(i, countLine)
+                                if l[i] == ")":
+                                    self.createRow(l[i], cont)
+                                    i += 1
+                                if l[i] == ";":
+                                    self.createRow(l[i], cont)
+                                    return self.file
                     i += 1
                 i = 0
-
+                countLine += 1
             cont += 1
         return [i, cont]
 
+    def type(self, line, i, countLine):
+        l = line[i:].split(" ")
+        print(l)
+        list = ["int", "boolean", "int[]", "int["]
+        if l[0] in list:
+           if (l[0] == "int" and l[1] == "[" and l[2] =="]") or (l[0] == "int[" and l[1] == "]"):
+               print("")
+           else:
+               print("")
+        else:
+            l = self.identifier(line, i)
+            if l == "":
+                print("erro line ", countLine)
+                return ""
+            else:
+                self.countIdentifier += 1
+                self.createRow(l[0], countLine)
+                self.symbolTable = self.symbolTable.append(
+                    {"value": l[0], "number": self.countIdentifier}, ignore_index=True)
+
+                i = l[2] - 1
+        token = ""
+        '''
+        for r in line:
+            if r != " " and r != "" and r != "\n":
+                token += + r
+            elif token != "":
+                if token in list:
+                    print(end="")
+        '''
+
+    def expression(self, i, countLine):
+        ii = i+3
+        list = ["true", "false", "this", "new", "int", "[", "]", "(", ")", "!", ".", "length", "&&", "<", "+", "-", "*"]
+        file = open(self.dir)
+        tk = ""
+        cont = 1
+        for l in file:
+            if cont >= countLine:
+                while i < len(l):
+                    if l[i] != " " and l[i] != "" and l[i] != "\n":
+                        tk += l[i]
+
+                    i += 1
+                countLine += 1
+            cont += 1
+
+        return ii
     def close(self):
         self.file.close()
+
+    def isErr(self, token, mc, countLine):
+        err = False
+        for r in token:
+            for palavra in mc:
+                for letra in palavra:
+                    if r == letra:
+                        err = False
+                        break
+                    else:
+                        err = True
+                if not err:
+                    break
+            if err:
+                return err
+        return err
 
 '''if token == "class" and est == 1:
                         self.createRow(token, countLine)
