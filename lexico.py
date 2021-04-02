@@ -131,7 +131,10 @@ class Lexico:
                             if l[i] != " " and l[i] != "" and l[i] != "\n":
                                 if l[i] == "(":
                                     self.createRow(l[i], cont)
-                                    self.expression(i, countLine)
+                                    li = self.expression(i+1, countLine)
+                                    i=li[0]
+                                    print(i)
+                                    print(len(l))
                                 if l[i] == ")":
                                     self.createRow(l[i], cont)
                                     i += 1
@@ -153,26 +156,36 @@ class Lexico:
         for line in file:
             cl += 1
             if cl == countLine:
+
                 while r < len(line):
+
                     if (line[r] >= 'a' and line[r] <= 'z') or (line[r] >= 'A' and line[r] <= 'Z') or(line[r] >= '0' and line[r] <= '9') or (line[r] == "_"):
                         tk += line[r]
+
                     elif line[r] != " " and line[r] != "" and line[r] != "\n":
                         #para entrar aki tem que ser diferente de letras e numeros e espaço vazio
                         if tk != '':
                             if line[r] in symbols:
-                                self.createRow(tk, countLine)
-                                print("----------")
-                                tk = ''
-                                self.createRow(line[r], countLine)
+                                if tk in strings:
+                                    self.createRow(tk, countLine)
+                                    tk = ''
+                                    self.createRow(line[r], countLine)
+                                else:
+                                    #saber se é um indetifile
+                                    if 'Test' == self.symbolTable.iloc[0]['value']:
+                                        for st in self.symbolTable['value']:
+                                            if tk == st:
+                                                self.createRow(tk, countLine)
                             else:
-                                print("erro na linha ", countLine)
-                                return ""
-                        '''else:
-                            if line[r] == "!":
-                                #self.createRow(line[r], r)
+                                print(line[r], "j")
+                                return [r, tk]
+                        else:
 
-                            elif line[r] == "(":
-                                #self.createRow(line[r], r)'''
+                            if line[r] in symbols:
+                                print(line[r])
+                                self.createRow(line[r], r)
+                            else:
+                                return [r, tk]
                     else:
                         if tk != '':
                             self.createRow(tk, countLine)
