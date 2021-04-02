@@ -42,6 +42,9 @@ class Lexico:
         if list != "":
             self.classDeclaration(list[0], list[1])
         print(self.out)
+        if 'Test' == self.symbolTable.iloc[0]['value']:
+            for st in self.symbolTable['value']:
+                print(st)
 
     def mainClass(self):
         mc = ["class", "Identifier", "{", "public", "static", "void", "main", "(", "String", "[", "]", "Identifier", ")",
@@ -109,6 +112,111 @@ class Lexico:
                 print("", end="")
                 #print(e, end="")
 
+    def methodDeclaration(self):
+        print(end='')
+
+    def statement(self, line, countLine):
+        file = open(self.dir)
+        cont = 1
+        tk = ""
+        i = 0
+        for l in file:
+            if cont >= countLine:
+                while i < len(l):
+                    if l[i] != " " and l[i] != "" and l[i] != "\n":
+                        tk += l[i]
+                        if tk == "System.out.println":
+                            self.createRow(tk, cont)
+                            i += 1
+                            if l[i] != " " and l[i] != "" and l[i] != "\n":
+                                if l[i] == "(":
+                                    self.createRow(l[i], cont)
+                                    self.expression(i, countLine)
+                                if l[i] == ")":
+                                    self.createRow(l[i], cont)
+                                    i += 1
+                                if l[i] == ";":
+                                    self.createRow(l[i], cont)
+                                    return self.file
+                    i += 1
+                i = 0
+                countLine += 1
+            cont += 1
+        return [i, cont]
+
+    def expression(self, r, countLine):
+        file = open(self.dir)
+        cl = 0
+        symbols = [".", "(", ")", "[", "]", "!", "&", "&&" "<", "+", "-", "*"]
+        strings = ["true", "false", "this", "new", "int", "length"]
+        tk = ''
+        for line in file:
+            cl += 1
+            if cl == countLine:
+                while r < len(line):
+                    if (line[r] >= 'a' and line[r] <= 'z') or (line[r] >= 'A' and line[r] <= 'Z') or(line[r] >= '0' and line[r] <= '9') or (line[r] == "_"):
+                        tk += line[r]
+                    elif line[r] != " " and line[r] != "" and line[r] != "\n":
+                        #para entrar aki tem que ser diferente de letras e numeros e espaço vazio
+                        if tk != '':
+                            if line[r] in symbols:
+                                self.createRow(tk, countLine)
+                                print("----------")
+                                tk = ''
+                                self.createRow(line[r], countLine)
+                            else:
+                                print("erro na linha ", countLine)
+                                return ""
+                        '''else:
+                            if line[r] == "!":
+                                #self.createRow(line[r], r)
+
+                            elif line[r] == "(":
+                                #self.createRow(line[r], r)'''
+                    else:
+                        if tk != '':
+                            self.createRow(tk, countLine)
+                            tk = ''
+                    r += 1
+                return [r, tk]
+
+
+    def varDeclaration(self, i, countLine):
+        l = self.type(i, countLine)
+        l = self.identifier(l[0], l[1])
+        #verificar o ';'
+
+    '''-ok-'''
+    def type(self, line, i, countLine):
+        l = line[i:].split(" ")
+        list = ["int", "boolean", "int[]", "int["]
+        if l[0] in list:
+           if (l[0] == "int" and l[1] == "[" and l[2] == "]") or (l[0] == "int[" and l[1] == "]") or (l[0] == "int" and l[1] == "[]") or l[0] == "int[]":
+               self.createRow("int", countLine)
+               self.createRow("[", countLine)
+               self.createRow("]", countLine)
+           else:
+               self.createRow(l[0], countLine)
+        else:
+            l = self.identifier(line, i)
+            if l == "":
+                print("erro line ", countLine)
+                return ""
+            else:
+                self.countIdentifier += 1
+                self.createRow(l[0], countLine)
+                self.symbolTable = self.symbolTable.append(
+                    {"value": l[0], "number": self.countIdentifier}, ignore_index=True)
+
+        '''
+        for r in line:
+            if r != " " and r != "" and r != "\n":
+                token += + r
+            elif token != "":
+                if token in list:
+                    print(end="")
+        '''
+    '''-ok-'''
     def identifier(self, re, be):
         stt = 1
         txt = ""
@@ -142,10 +250,19 @@ class Lexico:
                     else:
                         return [txt, re, b]
             be += 1
+    '''---------------------------------'''
+    def createRow(self, aux, cont):
+        tk = self.createToken(aux, cont)
+        stdd = self.pattern(aux)
+        self.out = self.out.append(
+            {"Lexema": aux, "Padrão": stdd, "Token": tk, "Linha": cont},
+            ignore_index=True)
 
     def createToken(self, text, cont):
         if text == "identifier":
             return "<Identifier, " + cont + ">"
+        elif text == "number":
+            return "<Number, " + cont + ">"
         return "<" + text + ",>"
 
     def pattern(self, text):
@@ -155,95 +272,10 @@ class Lexico:
         for r in self.symbols:
             if r == text:
                 return r
+        for r in text:
+            if r >= "0" and r <= "9":
+                return "Number"
         return "Identifier"
-
-    def createRow(self, aux, cont):
-        tk = self.createToken(aux, cont)
-        stdd = self.pattern(aux)
-        self.out = self.out.append(
-            {"Lexema": aux, "Padrão": stdd, "Token": tk, "Linha": cont},
-            ignore_index=True)
-
-    def statement(self, line, countLine):
-        file = open(self.dir)
-        cont = 1
-        tk = ""
-        i = 0
-        for l in file:
-            if cont >= countLine:
-                while i < len(l):
-                    if l[i] != " " and l[i] != "" and l[i] != "\n":
-                        tk += l[i]
-                        if tk == "System.out.println":
-                            self.createRow(tk, cont)
-                            i += 1
-
-                            if l[i] != " " and l[i] != "" and l[i] != "\n":
-                                if l[i] == "(":
-                                    self.createRow(l[i], cont)
-                                    i = self.expression(i, countLine)
-                                if l[i] == ")":
-                                    self.createRow(l[i], cont)
-                                    i += 1
-                                if l[i] == ";":
-                                    self.createRow(l[i], cont)
-                                    return self.file
-                    i += 1
-                i = 0
-                countLine += 1
-            cont += 1
-        return [i, cont]
-
-    def type(self, line, i, countLine):
-        l = line[i:].split(" ")
-        print(l)
-        list = ["int", "boolean", "int[]", "int["]
-        if l[0] in list:
-           if (l[0] == "int" and l[1] == "[" and l[2] == "]") or (l[0] == "int[" and l[1] == "]") or (l[0] == "int" and l[1] == "[]") or l[0] == "int[]":
-               self.createRow("int", countLine)
-               self.createRow("[", countLine)
-               self.createRow("]", countLine)
-           else:
-               self.createRow(l[0], countLine)
-        else:
-            l = self.identifier(line, i)
-            if l == "":
-                print("erro line ", countLine)
-                return ""
-            else:
-                self.countIdentifier += 1
-                self.createRow(l[0], countLine)
-                self.symbolTable = self.symbolTable.append(
-                    {"value": l[0], "number": self.countIdentifier}, ignore_index=True)
-
-        '''
-        for r in line:
-            if r != " " and r != "" and r != "\n":
-                token += + r
-            elif token != "":
-                if token in list:
-                    print(end="")
-        '''
-
-    def expression(self, i, countLine):
-        ii = i+3
-        list = ["true", "false", "this", "new", "int", "[", "]", "(", ")", "!", ".", "length", "&&", "<", "+", "-", "*"]
-        file = open(self.dir)
-        tk = ""
-        cont = 1
-        for l in file:
-            if cont >= countLine:
-                while i < len(l):
-                    if l[i] != " " and l[i] != "" and l[i] != "\n":
-                        tk += l[i]
-
-                    i += 1
-                countLine += 1
-            cont += 1
-
-        return ii
-    def close(self):
-        self.file.close()
 
     def isErr(self, token, mc, countLine):
         err = False
@@ -260,87 +292,14 @@ class Lexico:
             if err:
                 return err
         return err
+    def number(self, n, l):#"ac323"
+        number = ""
+        for i in len(l):
+            if i >= n:
+                if l[i] >= "0" and l[i] <= "9":
+                    number += l[i]
+                elif number != "":
+                    return [number, i]
 
-'''if token == "class" and est == 1:
-                        self.createRow(token, countLine)
-
-                        est += 1
-
-                        l = self.identifier(line, i + 1)
-                        if l == "":
-                            print("erro line ", countLine)
-                            return ""
-                        else:
-                            self.createRow(l[0], countLine)
-                            i = l[2] - 1
-                            token = ""
-
-                    elif token == "{" and est == 2:
-                        est += 1
-                        self.createRow(token, countLine)
-                        self.stackK.append("{")
-                        token = ""
-                    elif token == "public" and est == 3:
-                        est += 1
-                        print(est)
-                        self.createRow(token, countLine)
-                        token = ""
-                    elif token == "static" and est == 4:
-                        est += 1
-                        self.createRow(token, countLine)
-                        token = ""
-                    elif token == "void" and est == 5:
-                        est += 1
-                        self.createRow(token, countLine)
-                        token = ""
-                    elif token == "main" and est == 6:
-                        est += 1
-                        self.createRow(token, countLine)
-                        token = ""
-                    elif token == "(" and est == 7:
-                        est += 1
-                        self.createRow(token, countLine)
-                        self.stackP.append("(")
-                        token = ""
-                    elif token == "String" and est == 8:
-                        est += 1
-                        self.createRow(token, countLine)
-                        token = ""
-                    elif token == "[" and est == 9:
-                        est += 1
-                        self.createRow(token, countLine)
-                        self.stackC.append("[")
-                        token = ""
-                    elif token == "]" and est == 10:
-                        est += 1
-                        self.createRow(token, countLine)
-                        self.stackC.pop()
-                        l = self.identifier(line, i+1)
-                        if l == "":
-                            print("erro line ", countLine)
-                            return ""
-                        else:
-                            self.createRow(l[0], countLine)
-                            i = l[2] - 1
-                            token = ""
-                    elif token == ")" and est == 11:
-                        est += 1
-                        self.createRow(token, countLine)
-                        self.stackP.pop()
-                        token = ""
-                    elif token == "{" and est == 12:
-                        est += 1
-                        self.createRow(token, countLine)
-                        self.stackK.append("{")
-                        self.statement(i, countLine)
-                        token = ""
-                    elif token == "}" and est == 13:
-                        est += 1
-                        print(est)
-                        token = ""
-                    elif token == "}" and est == 14:
-                        est += 1
-                        print(est)
-                        token = ""
-                    else:
-                        print(end="")'''
+    def close(self):
+        self.file.close()
