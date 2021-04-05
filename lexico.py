@@ -29,6 +29,7 @@ class Lexico:
             "(", ")",
             "[", "]",
             "{", "}", ";"
+            "<", "+", "-", "*", ".", "!", ";"
         ]
         self.stackK = [] #pilha de chaves
         self.stackP = [] #pilha de parenteses
@@ -38,13 +39,12 @@ class Lexico:
 
     def structure(self):
         list = self.mainClass()
-        print(list)
         if list != "":
             self.classDeclaration(list[0], list[1])
         print(self.out)
         if 'Test' == self.symbolTable.iloc[0]['value']:
             for st in self.symbolTable['value']:
-                print(st)
+                print(end="")
 
     def mainClass(self):
         mc = ["class", "Identifier", "{", "public", "static", "void", "main", "(", "String", "[", "]", "Identifier", ")",
@@ -59,7 +59,7 @@ class Lexico:
             if est < len(mc):
                 while i < len(line):
                     if line[i] != " " and line[i] != "" and line[i] != "\n":
-                        token = token + line[i]
+                        token += line[i]
                         #print(token)
                         if token == mc[est] or mc[est] == "Identifier" or mc[est] == "Statement":
                             if mc[est] == "Identifier":
@@ -77,7 +77,7 @@ class Lexico:
                                     token = ""
                                 est += 1
                             elif mc[est] == "Statement":
-                                self.statement(line, countLine)
+                                self.statement(0, countLine)
                                 est += 1
                                 i = len(line)
                                 token = ""
@@ -115,11 +115,10 @@ class Lexico:
     def methodDeclaration(self):
         print(end='')
 
-    def statement(self, line, countLine):
+    def statement(self, i, countLine):
         file = open(self.dir)
         cont = 1
         tk = ""
-        i = 0
         for l in file:
             if cont >= countLine:
                 while i < len(l):
@@ -132,15 +131,36 @@ class Lexico:
                                 if l[i] == "(":
                                     self.createRow(l[i], cont)
                                     li = self.expression(i+1, countLine)
-                                    i=li[0]
-                                    print(i)
-                                    print(len(l))
+                                    i = li[0]
+                                    if not (l[i] in self.symbols):
+                                        print("erro in line ", countLine)
+                                        print(l[i], end="h")
+                                        return ""
                                 if l[i] == ")":
                                     self.createRow(l[i], cont)
                                     i += 1
                                 if l[i] == ";":
                                     self.createRow(l[i], cont)
-                                    return self.file
+                                    return [i, cont]
+                        elif tk == "{":
+                            self.createRow(tk, countLine)
+                            tk = ''
+                            aux = self.statement(i+1, countLine)
+                            i = aux[0]
+                            while i < len(l):
+                                if l[i] != " " and l[i] != "" and l[i] != "\n":
+                                    if l[i] == "}":
+                                        self.createRow(l[i], countLine)
+
+                                i+=1
+                        elif tk == "if(":
+                            self.createRow("if", countLine)
+                            self.createRow("(", countLine)
+                            self.expression(i, countLine)
+
+                        elif tk == 'while':
+                            print('while')
+
                     i += 1
                 i = 0
                 countLine += 1
@@ -150,6 +170,7 @@ class Lexico:
     def expression(self, r, countLine):
         file = open(self.dir)
         cl = 0
+        keys = 0
         symbols = [".", "(", ")", "[", "]", "!", "&", "&&" "<", "+", "-", "*"]
         strings = ["true", "false", "this", "new", "int", "length"]
         tk = ''
@@ -158,10 +179,8 @@ class Lexico:
             if cl == countLine:
 
                 while r < len(line):
-
                     if (line[r] >= 'a' and line[r] <= 'z') or (line[r] >= 'A' and line[r] <= 'Z') or(line[r] >= '0' and line[r] <= '9') or (line[r] == "_"):
                         tk += line[r]
-
                     elif line[r] != " " and line[r] != "" and line[r] != "\n":
                         #para entrar aki tem que ser diferente de letras e numeros e espaço vazio
                         if tk != '':
@@ -172,18 +191,27 @@ class Lexico:
                                     self.createRow(line[r], countLine)
                                 else:
                                     #saber se é um indetifile
-                                    if 'Test' == self.symbolTable.iloc[0]['value']:
-                                        for st in self.symbolTable['value']:
-                                            if tk == st:
-                                                self.createRow(tk, countLine)
+                                    for st in self.symbolTable['value']:
+                                        if tk == st:
+                                            self.createRow(tk, countLine)
+                                            tk = ''
+                                            if line[r] in symbols:
+                                                self.createRow(line[r], countLine)
+                                            else:
+
+                                                return [r, tk]
+                                            break
+                                    self.createRow(tk, countLine)
+                                    tk = ''
+                                    if line[r] in symbols:
+                                        self.createRow(line[r], countLine)
+
                             else:
-                                print(line[r], "j")
+                                self.createRow(tk, countLine)#
                                 return [r, tk]
                         else:
-
                             if line[r] in symbols:
-                                print(line[r])
-                                self.createRow(line[r], r)
+                                self.createRow(line[r], countLine)
                             else:
                                 return [r, tk]
                     else:
@@ -191,6 +219,7 @@ class Lexico:
                             self.createRow(tk, countLine)
                             tk = ''
                     r += 1
+
                 return [r, tk]
 
 
@@ -230,39 +259,35 @@ class Lexico:
                     print(end="")
         '''
     '''-ok-'''
-    def identifier(self, re, be):
+    def identifier(self, line, i):
         stt = 1
         txt = ""
-        for b in range(len(re)):
-            b = be
-            if stt == 1:
-                if re[b] >= "a" and re[b] <= "z":
-                    txt += re[b]
-                    stt+=1
-                elif re[b] >= "A" and re[b] <= "Z":
-                    txt += re[b]
-                    stt += 1
-                elif re[b] == "_":
-                    txt += re[b]
-                    stt += 1
-                elif re[b] != " " and re[b] != "" and re[b] != "\n":
+        for b in range(len(line)):
+            b = i
+            if txt == "":
+                if line[b] >= "a" and line[b] <= "z":
+                    txt += line[b]
+                elif line[b] >= "A" and line[b] <= "Z":stt += 1
+                elif line[b] == "_":
+                    txt += line[b]
+                elif line[b] != " " and line[b] != "" and line[b] != "\n":
                     return ""
             else:
-                if re[b] >= "a" and re[b] <= "z":
-                    txt +=re[b]
-                elif re[b] >="A" and re[b] <="Z":
-                    txt +=re[b]
-                elif re[b] >="0" and re[b] <="9":
-                    txt +=re[b]
-                elif re[b] == "_":
-                    txt +=re[b]
+                if line[b] >= "a" and line[b] <= "z":
+                    txt +=line[b]
+                elif line[b] >= "A" and line[b] <= "Z":
+                    txt +=line[b]
+                elif line[b] >= "0" and line[b] <= "9":
+                    txt +=line[b]
+                elif line[b] == "_":
+                    txt +=line[b]
                 else:
                     if txt in self.lexemasReserveString:
                         print("palavra reservada")
                         return ""
                     else:
-                        return [txt, re, b]
-            be += 1
+                        return [txt, line, b]
+            i += 1
     '''---------------------------------'''
     def createRow(self, aux, cont):
         tk = self.createToken(aux, cont)
