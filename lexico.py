@@ -28,7 +28,7 @@ class Lexico:
         self.symbols = [
             "(", ")",
             "[", "]",
-            "{", "}", ";"
+            "{", "}",
             "<", "+", "-", "*", ".", "!", ";"
         ]
         self.stackK = [] #pilha de chaves
@@ -42,9 +42,10 @@ class Lexico:
         if list != "":
             self.classDeclaration(list[0], list[1])
         print(self.out)
-        if 'Test' == self.symbolTable.iloc[0]['value']:
+        print(self.symbolTable)
+        '''if 'Test' == self.symbolTable.iloc[0]['value']:
             for st in self.symbolTable['value']:
-                print(end="")
+                print(end="")'''
 
     def mainClass(self):
         mc = ["class", "Identifier", "{", "public", "static", "void", "main", "(", "String", "[", "]", "Identifier", ")",
@@ -100,77 +101,147 @@ class Lexico:
                                 est += 1
 
                         else:
-                            if self.isErr(token, mc, countLine):
-                                print("erro! Simbolo invalido na linha ", countLine)
+                            if self.isErr(token, mc, countLine) and self.isErr(token, self.symbols, countLine):
+                                print("erro! Simbolo invalido na linha ", token, countLine)
                                 return ''
                     i += 1
         return [line, i]
 
-    def classDeclaration(self, r, e):
-        for r in self.file:
-            for e in r:
-                print("", end="")
-                #print(e, end="")
+    def classDeclaration(self, r, countLine):
+        cd  = ["class", "Identifier", "extends", "Identifier", "{", "VarDeclaration", "MethodDeclaration", "}"]
+        tk  = ''
+        est = 0
+        for line in self.file:
+            for e in line:
+                if e != " " and e != "" and e != "\n":
+                    tk += e
+                    if tk == cd[est]:
+                        self.createRow(token, countLine)
+                        token = ''
+                        est += 1
+                    elif cd[est] == "Identifier":
+                        l = self.identifier(line, i)
+                        if l == '':
+                            print("erro line ", countLine)
+                            return ''
+                        else:
+                            self.countIdentifier += 1
+                            self.createRow(l[0], countLine)
+                            self.symbolTable = self.symbolTable.append(
+                                {"value": l[0], "number": self.countIdentifier}, ignore_index=True)
+                            i = l[2] - 1
+                            token = ''
+                            est += 1
+                    elif (est == 2 or est == 4) and tk == "{":
+                        self.createRow('{', countLine)
+                        est = 5
+                        tk = ''
 
     def methodDeclaration(self):
         print(end='')
 
     def statement(self, i, countLine):
         file = open(self.dir)
-        cont = 1
+        cont = 0
         tk = ""
-        for l in file:
-            if cont >= countLine:
-                while i < len(l):
-                    if l[i] != " " and l[i] != "" and l[i] != "\n":
-                        tk += l[i]
-                        if tk == "System.out.println":
-                            self.createRow(tk, cont)
-                            i += 1
-                            if l[i] != " " and l[i] != "" and l[i] != "\n":
-                                if l[i] == "(":
-                                    self.createRow(l[i], cont)
-                                    li = self.expression(i+1, countLine)
-                                    i = li[0]
-                                    if not (l[i] in self.symbols):
-                                        print("erro in line ", countLine)
-                                        print(l[i], end="h")
-                                        return ""
-                                if l[i] == ")":
-                                    self.createRow(l[i], cont)
-                                    i += 1
-                                if l[i] == ";":
-                                    self.createRow(l[i], cont)
-                                    return [i, cont]
-                        elif tk == "{":
-                            self.createRow(tk, countLine)
-                            tk = ''
-                            aux = self.statement(i+1, countLine)
-                            i = aux[0]
-                            while i < len(l):
-                                if l[i] != " " and l[i] != "" and l[i] != "\n":
-                                    if l[i] == "}":
-                                        self.createRow(l[i], countLine)
-
-                                i+=1
-                        elif tk == "if(":
-                            self.createRow("if", countLine)
-                            self.createRow("(", countLine)
-                            self.expression(i, countLine)
-
-                        elif tk == 'while':
-                            print('while')
-
-                    i += 1
-                i = 0
-                countLine += 1
+        for line in file:
             cont += 1
+            if cont >= countLine:
+                if not "=" in line:
+                    while i < len(line):
+                        if line[i] != " " and line[i] != "" and line[i] != "\n":
+                            tk += line[i]
+                            if tk == "System.out.println":
+                                self.createRow(tk, cont)
+                                i += 1
+                                if line[i] != " " and line[i] != "" and line[i] != "\n":
+                                    if line[i] == "(":
+                                        self.createRow(line[i], cont)
+                                        li = self.expression(i+1, countLine)
+                                        i = li[0]
+                                        if not (line[i] in self.symbols):
+                                            print("erro in line ", countLine)
+                                            print(line[i], end="")
+                                            return ""
+                                    #if l[i] == ")":
+                                    #    self.createRow(l[i], cont)
+                                    #    i += 1
+                                    if line[i] == ";":
+                                        self.createRow(line[i], cont)
+
+                                        return [i, cont]
+                            elif tk == "{":
+                                self.createRow(tk, countLine)
+                                tk = ''
+                                aux = self.statement(i+1, countLine)
+                                i = aux[0]
+                                while i < len(line):
+                                    if line[i] != " " and line[i] != "" and line[i] != "\n":
+                                        if line[i] == "}":
+                                            self.createRow(line[i], countLine)
+
+                                    i += 1
+                            elif tk == "if(":
+                                self.createRow("if", countLine)
+                                self.createRow("(", countLine)
+                                li = self.expression(i+1, countLine)
+
+                                i = li[0]
+                                if line[i] == "{":
+                                    self.createRow("{", countLine)
+                                    self.statement(0, countLine+1)
+                                    countLine += 1
+                                tk = ''
+                            elif tk == "else{":
+                                self.createRow("else", countLine)
+                                self.createRow("{", countLine)
+                                self.statement(i+1, countLine)
+                                countLine += 1
+
+                                tk = ''
+                            elif tk == 'while(':
+                                self.createRow("while", countLine)
+                                self.createRow("(", countLine)
+                                li = self.expression(i+1, countLine)
+                                i = li[0]
+                                if line[i] == "{":
+                                    self.createRow("{", countLine)
+                                    self.statement(0, countLine + 1)
+                                    countLine += 1
+                                tk = ''
+                            elif tk == "}":
+                                self.createRow("}", countLine)
+                                tk = ''
+
+                        i += 1
+                    i = 0
+                    countLine += 1
+                else:
+                    if "[" in line and "]" in line and "=" in line:
+                        l = line.split("[")
+                        for r in l[0]:
+                            if r != " " and r != "" and r != "\n":
+                                aux += r
+                        self.createRow(aux, countLine)
+                        self.createRow("[", countLine)
+                        self.expression(len(l[0] + 1), countLine)
+                    else:
+                        l = line.split("=")
+                        self.countIdentifier += 1
+                        aux = ""
+                        for r in l[0]:
+                            if r != " " and r != "" and r != "\n":
+                                aux += r
+                        self.createRow(aux, countLine)
+                        self.createRow("=", countLine)
+                        self.expression(len(l[0]+1), countLine)
+
+
         return [i, cont]
 
     def expression(self, r, countLine):
         file = open(self.dir)
         cl = 0
-        keys = 0
         symbols = [".", "(", ")", "[", "]", "!", "&", "&&" "<", "+", "-", "*"]
         strings = ["true", "false", "this", "new", "int", "length"]
         tk = ''
@@ -198,9 +269,8 @@ class Lexico:
                                             if line[r] in symbols:
                                                 self.createRow(line[r], countLine)
                                             else:
-
                                                 return [r, tk]
-                                            break
+
                                     self.createRow(tk, countLine)
                                     tk = ''
                                     if line[r] in symbols:
@@ -208,6 +278,7 @@ class Lexico:
 
                             else:
                                 self.createRow(tk, countLine)#
+
                                 return [r, tk]
                         else:
                             if line[r] in symbols:
@@ -222,12 +293,12 @@ class Lexico:
 
                 return [r, tk]
 
-
-    def varDeclaration(self, i, countLine):
-        l = self.type(i, countLine)
-        l = self.identifier(l[0], l[1])
-        #verificar o ';'
-
+    def varDeclaration(self, line, i, countLine):
+        l = self.type(line, i, countLine)
+        if l != '':
+            self.identifier(l[0], l[1])
+        if ";" in line:
+            self.createRow(";", countLine)
     '''-ok-'''
     def type(self, line, i, countLine):
         l = line[i:].split(" ")
@@ -267,14 +338,15 @@ class Lexico:
             if txt == "":
                 if line[b] >= "a" and line[b] <= "z":
                     txt += line[b]
-                elif line[b] >= "A" and line[b] <= "Z":stt += 1
+                elif line[b] >= "A" and line[b] <= "Z":
+                    txt += line[b]
                 elif line[b] == "_":
                     txt += line[b]
                 elif line[b] != " " and line[b] != "" and line[b] != "\n":
                     return ""
             else:
                 if line[b] >= "a" and line[b] <= "z":
-                    txt +=line[b]
+                    txt += line[b]
                 elif line[b] >= "A" and line[b] <= "Z":
                     txt +=line[b]
                 elif line[b] >= "0" and line[b] <= "9":
@@ -297,10 +369,13 @@ class Lexico:
             ignore_index=True)
 
     def createToken(self, text, cont):
-        if text == "identifier":
-            return "<Identifier, " + cont + ">"
-        elif text == "number":
-            return "<Number, " + cont + ">"
+        if text not in self.lexemasReserveString and text not in self.symbols:
+            if text[0] >= "0" and text[0] <= "9":
+                return "<Number, >"
+            #for st in self.symbolTable['value']:
+             #   if st == text:
+
+            return "<Identifier, " + str(cont) + ">"
         return "<" + text + ",>"
 
     def pattern(self, text):

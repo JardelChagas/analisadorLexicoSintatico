@@ -1,12 +1,15 @@
 class Test{
     public static void main(String[] a){
-        if(true){
-            System.out.println(10);
-        }else{
-            System.out.println(10);
+        while(true){
+            System.out.println(15);
         }
+
+
 
 
     }
 }
 
+class Pessoa{
+
+}
